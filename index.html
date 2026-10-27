@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tokenization Challenge</title>
+<style>
+:root{
+  --bg:#f4f5fa;--panel:#ffffff;--panel2:#eceef6;--line:#d5d9e8;--text:#1b2033;--muted:#5a6280;
+  --accent:#3d5afe;--accent-text:#ffffff;--ok:#16794a;--okbg:#dff5e9;--bad:#b3203f;--badbg:#fbe3e8;
+  --code:#f9faff;
+  --t-Keyword:#8a3fc7;--t-Identifier:#2848d8;--t-Number:#a85a00;--t-String:#1f7a3a;--t-Operator:#c2234a;--t-Separator:#56607a;--t-Comment:#6b7389;
+  --mono:ui-monospace,"JetBrains Mono","Cascadia Code",Consolas,Menlo,monospace;
+  --sans:"Segoe UI",system-ui,-apple-system,"Helvetica Neue",Arial,sans-serif;
+}
+:root[data-theme="dark"]{
+  --bg:#0f1220;--panel:#181c2f;--panel2:#20253b;--line:#2f3652;--text:#e7e9f5;--muted:#9aa2c0;
+  --accent:#8aa4ff;--accent-text:#0f1220;--ok:#6fe0a0;--okbg:#14301f;--bad:#ff8aa0;--badbg:#3a1621;
+  --code:#12162a;
+  --t-Keyword:#c792ea;--t-Identifier:#7aa2ff;--t-Number:#f2b36b;--t-String:#7bd88f;--t-Operator:#ff7a90;--t-Separator:#a5afcb;--t-Comment:#8a93ae;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.55;min-height:100vh;transition:background .2s,color .2s}
+button{font:inherit;color:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.wrap{max-width:960px;margin:0 auto;padding:0 18px 48px}
+header{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:20px 0 12px}
+h1{margin:0;font-size:1.6rem;letter-spacing:-.02em;font-family:var(--mono);font-weight:700}
+h1 span{color:var(--accent)}
+h2{margin:0 0 10px;font-size:1.3rem}
+h3{margin:18px 0 8px;font-size:1.05rem}
+.themebtn{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:7px 14px;font-size:.9rem}
+.themebtn:hover{border-color:var(--accent)}
+nav{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line);margin-bottom:22px}
+nav button{background:none;border:0;border-bottom:3px solid transparent;padding:10px 14px;color:var(--muted);font-weight:600}
+nav button[aria-current="page"]{color:var(--text);border-bottom-color:var(--accent)}
+nav button:hover{color:var(--text)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:20px}
+.lead{color:var(--muted);max-width:62ch;margin:0 0 18px}
+.levels{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+.lvl{text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;transition:border-color .15s,transform .15s}
+.lvl:hover{border-color:var(--accent);transform:translateY(-2px)}
+.lvl b{display:block;font-size:1.15rem;margin-bottom:4px}
+.lvl small{color:var(--muted);display:block}
+.lvl .meta{margin-top:10px;font-family:var(--mono);font-size:.82rem;color:var(--muted)}
+.lvl .best{margin-top:6px;font-size:.85rem;color:var(--accent)}
+.hud{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.hud div{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 12px;font-size:.9rem}
+.hud b{font-family:var(--mono)}
+.bar{height:6px;background:var(--panel2);border-radius:99px;overflow:hidden;margin-bottom:16px}
+.bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .25s}
+pre.code{margin:0 0 16px;padding:16px 18px;background:var(--code);border:1px solid var(--line);border-radius:12px;font-family:var(--mono);font-size:1.02rem;line-height:1.9;overflow-x:auto;white-space:pre;tab-size:2}
+.tk{border-radius:5px;padding:1px 0}
+.target{outline:2px solid var(--accent);outline-offset:2px;background:color-mix(in srgb,var(--accent) 22%,transparent);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{outline-offset:4px}}
+@media (prefers-reduced-motion:reduce){.target{animation:none}*{transition:none!important}}
+.dim{opacity:.55}
+.q{font-size:1.1rem;margin:0 0 12px}
+.q code,.fb code,.why code{font-family:var(--mono);background:var(--panel2);padding:2px 7px;border-radius:6px}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.opt{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:11px 12px;text-align:left}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt kbd{font-family:var(--mono);font-size:.75rem;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:0 5px}
+.dot{width:12px;height:12px;border-radius:50%;flex:none}
+.opt.ok{background:var(--okbg);border-color:var(--ok)}
+.opt.bad{background:var(--badbg);border-color:var(--bad)}
+.opt:disabled{cursor:default}
+.fb{margin-top:14px;padding:12px 14px;border-radius:10px;border:1px solid var(--line)}
+.fb.ok{background:var(--okbg);border-color:var(--ok)}
+.fb.bad{background:var(--badbg);border-color:var(--bad)}
+.btn{background:var(--accent);color:var(--accent-text);border:0;border-radius:10px;padding:10px 18px;font-weight:700}
+.btn:hover:not(:disabled){filter:brightness(1.08)}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.ghost{background:var(--panel2);color:var(--text);border:1px solid var(--line)}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:14px}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0}
+.stat{background:var(--panel2);border-radius:10px;padding:12px}
+.stat b{display:block;font-size:1.5rem;font-family:var(--mono)}
+.stat span{color:var(--muted);font-size:.85rem}
+table{border-collapse:collapse;width:100%;font-size:.93rem}
+th,td{border-bottom:1px solid var(--line);padding:8px 10px;text-align:left;vertical-align:top}
+th{color:var(--muted);font-weight:600}
+td code,.mono{font-family:var(--mono)}
+.tw{overflow-x:auto}
+.pill{display:inline-flex;align-items:center;gap:6px;font-weight:600}
+details{border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-bottom:12px}
+summary{cursor:pointer;padding:12px 16px;font-weight:700}
+details>div{padding:0 16px 16px}
+ul,ol{padding-left:22px;margin:6px 0}
+li{margin:4px 0}
+.why{color:var(--muted)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>token<span>ization</span> challenge</h1>
+    <button class="themebtn" id="themeBtn" type="button" aria-label="Switch colour theme"></button>
+  </header>
+  <nav id="nav" aria-label="Sections">
+    <button data-go="play">Play</button>
+    <button data-go="rules">Rules &amp; scoring</button>
+    <button data-go="demo">How to play</button>
+    <button data-go="key">Answer key</button>
+  </nav>
+
+  <main>
+    <section id="home">
+      <p class="lead">A scanner reads source code and cuts it into lexemes. Your job is to name the token type of each highlighted lexeme. Pick a level to start.</p>
+      <div class="levels" id="levels"></div>
+    </section>
+
+    <section id="play" hidden>
+      <div class="hud" id="hud"></div>
+      <div class="bar"><i id="barFill"></i></div>
+      <div id="qArea"></div>
+    </section>
+
+    <section id="result" hidden></section>
+
+    <section id="rules" hidden>
+      <div class="card">
+        <h2>Game rules</h2>
+        <ol>
+          <li>Choose a difficulty level. Each level has 3 code snippets and asks 4 questions per snippet, so 12 questions in total.</li>
+          <li>One lexeme in the snippet is highlighted. Choose the token type that the scanner would assign to it.</li>
+          <li>You get instant feedback and a short reason after every answer. One answer per question, no undo.</li>
+          <li>The questions are drawn at random each game, so replaying a level gives new targets.</li>
+          <li>After question 12 you see your score, rating and a review of every mistake.</li>
+        </ol>
+        <h3>Difficulty levels</h3>
+        <div class="tw"><table>
+          <tr><th>Level</th><th>Token types</th><th>Points per correct</th><th>Penalty per wrong</th><th>What makes it harder</th></tr>
+          <tr><td>Easy</td><td>5</td><td>10</td><td>0</td><td>Short, clean C statements</td></tr>
+          <tr><td>Medium</td><td>6 (adds String)</td><td>15</td><td>3</td><td>Char and string literals, arrays, loops</td></tr>
+          <tr><td>Hard</td><td>7 (adds Comment)</td><td>20</td><td>5</td><td>Traps: <code>intValue</code>, <code>_count</code>, <code>&gt;=</code>, keywords inside strings and comments</td></tr>
+        </table></div>
+        <h3>Scoring</h3>
+        <ul>
+          <li><b>Correct answer:</b> the points for your level.</li>
+          <li><b>Streak bonus:</b> from your 3rd correct answer in a row, each further correct answer adds +5.</li>
+          <li><b>Wrong answer:</b> loses the level's penalty and resets your streak. Your score never drops below 0.</li>
+          <li><b>Maximum score:</b> Easy 170, Medium 230, Hard 290 (every answer correct, streak bonus included).</li>
+        </ul>
+        <div class="tw"><table>
+          <tr><th>Accuracy</th><th>Rating</th></tr>
+          <tr><td>90% or more</td><td>Lexer Master</td></tr>
+          <tr><td>70% to 89%</td><td>Token Tamer</td></tr>
+          <tr><td>50% to 69%</td><td>Scanner Apprentice</td></tr>
+          <tr><td>Below 50%</td><td>Keep practising</td></tr>
+        </table></div>
+        <h3>Token types</h3>
+        <div class="tw"><table id="legend"></table></div>
+        <h3>Scanner rules to remember</h3>
+        <ul>
+          <li><b>Longest match:</b> <code>&gt;=</code> is one operator, not <code>&gt;</code> then <code>=</code>.</li>
+          <li><b>Keywords beat identifiers:</b> <code>int</code> is a keyword, but <code>intValue</code> is an identifier.</li>
+          <li><b>Quotes and comments swallow everything inside them.</b> A keyword inside a string is still part of the string.</li>
+          <li>Whitespace separates lexemes but is never a token.</li>
+        </ul>
+        <p class="why">Keyboard: press 1 to 7 to choose an answer. Press Enter on the Next button to continue.</p>
+      </div>
+    </section>
+
+    <section id="demo" hidden>
+      <div class="card">
+        <h2>How to play: a sample round</h2>
+        <p class="lead">Step through the snippet below. At each step one lexeme is highlighted, exactly as it would be in the game, and you see the correct answer with its reason.</p>
+        <div id="demoCode"></div>
+        <div class="fb" id="demoBox"></div>
+        <div class="row">
+          <button class="btn ghost" id="demoBack" type="button">Back</button>
+          <button class="btn" id="demoNext" type="button">Next step</button>
+          <button class="btn ghost" id="demoReset" type="button">Restart</button>
+        </div>
+        <div id="demoSum" hidden>
+          <h3>Token stream the scanner produces</h3>
+          <div class="tw"><table id="demoTable"></table></div>
+          <h3>Sample scoring (Easy level)</h3>
+          <p>Suppose the first four questions go like this:</p>
+          <div class="tw"><table>
+            <tr><th>Question</th><th>Your answer</th><th>Result</th><th>Points</th><th>Running score</th></tr>
+            <tr><td><code>int</code></td><td>Keyword</td><td>Correct, streak 1</td><td>+10</td><td>10</td></tr>
+            <tr><td><code>total</code></td><td>Identifier</td><td>Correct, streak 2</td><td>+10</td><td>20</td></tr>
+            <tr><td><code>=</code></td><td>Operator</td><td>Correct, streak 3 (bonus)</td><td>+10 +5</td><td>35</td></tr>
+            <tr><td><code>42</code></td><td>Identifier</td><td>Wrong, streak resets</td><td>0 (Easy has no penalty)</td><td>35</td></tr>
+          </table></div>
+          <div class="row"><button class="btn" type="button" data-go="play">Start playing</button></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="key" hidden>
+      <h2>Answer key</h2>
+      <p class="lead">Every lexeme in every snippet with its correct token type. Questions in the game are drawn from these tables.</p>
+      <div id="keyBody"></div>
+    </section>
+  </main>
+</div>
+
+<script>
+"use strict";
+/* ---------- Lexer (generates every answer, so the key always matches the game) ---------- */
+const KEYWORDS = new Set("int float double char void long short unsigned signed const static struct if else for while do switch case default return break continue sizeof".split(" "));
+const RULES = [
+  ["ws", /\s+/y],
+  ["Comment", /\/\/[^\n]*|\/\*[\s\S]*?\*\//y],
+  ["String", /"(?:\\.|[^"\\\n])*"|'(?:\\.|[^'\\\n])*'/y],
+  ["Number", /\d+\.\d+|\d+/y],
+  ["Word", /[A-Za-z_][A-Za-z0-9_]*/y],
+  ["Operator", /<<=|>>=|==|!=|<=|>=|&&|\|\||\+\+|--|\+=|-=|\*=|\/=|%=|->|<<|>>|[+\-*\/%=<>!&|^~]/y],
+  ["Separator", /[(){}\[\];,.]/y]
+];
+function lex(src){
+  const out = []; let i = 0;
+  while(i < src.length){
+    let hit = false;
+    for(const [name, re] of RULES){
+      re.lastIndex = i;
+      const m = re.exec(src);
+      if(m){
+        if(name !== "ws"){
+          const type = name === "Word" ? (KEYWORDS.has(m[0]) ? "Keyword" : "Identifier") : name;
+          out.push({type, text:m[0], start:i, end:i + m[0].length});
+        }
+        i += m[0].length; hit = true; break;
+      }
+    }
+    if(!hit) throw new Error("Unexpected character " + src[i] + " at " + i);
+  }
+  return out;
+}
+
+/* ---------- Data ---------- */
+const TYPES = {
+  Keyword:{why:"A reserved word with a fixed meaning in the language. It cannot be used as a variable name.", ex:"int, if, while, return"},
+  Identifier:{why:"A name chosen by the programmer for a variable, array or function. It starts with a letter or _ and is not a keyword.", ex:"total, _count, intValue, printf"},
+  Number:{why:"A numeric constant: digits, optionally with a decimal point.", ex:"42, 9.5, 100.0"},
+  String:{why:"A string \"...\" or character '...' literal. Everything between the quotes is one lexeme, even words that look like keywords.", ex:"\"Total: %d\", 'A'"},
+  Operator:{why:"A symbol that performs an operation. The scanner takes the longest match, so >= or ++ is a single operator.", ex:"+, =, >=, &&, ++, *"},
+  Separator:{why:"Punctuation that structures the code: brackets, braces, semicolons, commas.", ex:"( ) { } [ ] ; ,"},
+  Comment:{why:"Programmer notes. The scanner recognises the whole comment as one lexeme and then discards it.", ex:"// note, /* note */"}
+};
+const T5 = ["Keyword","Identifier","Number","Operator","Separator"];
+const LEVELS = {
+  easy:{name:"Easy", blurb:"Clean statements and the five core token types.", types:T5, pts:10, pen:0, snippets:[
+    "int total = count + 42;",
+    "if (age >= 18) {\n  return 1;\n}",
+    "float price = 9.5;\nwhile (price > 0) price = price - 1;"
+  ]},
+  medium:{name:"Medium", blurb:"Adds string and character literals, arrays and loops.", types:[...T5.slice(0,3),"String",...T5.slice(3)], pts:15, pen:3, snippets:[
+    "char grade = 'A';\nint marks[3] = {80, 75, 92};",
+    "for (int i = 0; i < n; i++) {\n  sum += arr[i];\n}",
+    "printf(\"Total: %d\", sum);\nreturn 0;"
+  ]},
+  hard:{name:"Hard", blurb:"Comments, look-alike names and multi-character operators.", types:[...T5.slice(0,3),"String",...T5.slice(3),"Comment"], pts:20, pen:5, snippets:[
+    "// loop until done\nwhile (_count != 10 && flag) {\n  _count += 2;\n}",
+    "double ratio = 3.14 * radius * radius; /* area */\nif (ratio <= 100.0 || intValue == 0) ratio--;",
+    "char *msg = \"if else 42\";\nunsigned int id_2 = a << 2;\nreturn msg != 0;"
+  ]}
+};
+const PER_SNIPPET = 4, STREAK_AT = 3, BONUS = 5;
+Object.values(LEVELS).forEach(L => { L.parsed = L.snippets.map(s => ({src:s, toks:lex(s)})); });
+
+/* ---------- Helpers ---------- */
+const $ = id => document.getElementById(id);
+function h(tag, attrs = {}, ...kids){
+  const e = document.createElement(tag);
+  for(const k in attrs){
+    if(k === "class") e.className = attrs[k];
+    else if(k.startsWith("on")) e.addEventListener(k.slice(2), attrs[k]);
+    else e.setAttribute(k, attrs[k]);
+  }
+  kids.flat().forEach(c => { if(c != null && c !== false) e.append(c); });
+  return e;
+}
+const shuffle = a => { a = a.slice(); for(let i = a.length - 1; i > 0; i--){ const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+function codeEl(sn, opts = {}){
+  const pre = h("pre", {class:"code"}); let pos = 0;
+  sn.toks.forEach((t, k) => {
+    if(t.start > pos) pre.append(sn.src.slice(pos, t.start));
+    const sp = h("span", {class:"tk"}, t.text);
+    if(opts.target === k) sp.classList.add("target");
+    else if(opts.dimOthers) sp.classList.add("dim");
+    if(opts.colorAll || (opts.colorUpTo != null && k < opts.colorUpTo)) sp.style.color = "var(--t-" + t.type + ")";
+    pre.append(sp); pos = t.end;
+  });
+  if(pos < sn.src.length) pre.append(sn.src.slice(pos));
+  return pre;
+}
+const dot = type => h("span", {class:"dot", style:"background:var(--t-" + type + ")"});
+function store(key, val){
+  try{ if(val === undefined) return localStorage.getItem(key); localStorage.setItem(key, val); }catch(e){ return null; }
+}
+const maxScore = (L, n) => L.pts * n + BONUS * Math.max(0, n - STREAK_AT + 1);
+
+/* ---------- Theme ---------- */
+function setTheme(t){
+  document.documentElement.setAttribute("data-theme", t);
+  $("themeBtn").textContent = t === "dark" ? "Switch to light theme" : "Switch to dark theme";
+  store("tc-theme", t);
+}
+(function(){
+  let t = store("tc-theme");
+  if(t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  setTheme(t);
+})();
+$("themeBtn").addEventListener("click", () => setTheme(document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark"));
+
+/* ---------- Navigation ---------- */
+const SECTIONS = ["home","play","result","rules","demo","key"];
+let game = null;
+function show(id){
+  SECTIONS.forEach(s => { $(s).hidden = s !== id; });
+  const navId = ["home","play","result"].includes(id) ? "play" : id;
+  document.querySelectorAll("#nav button").forEach(b => {
+    if(b.dataset.go === navId) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current");
+  });
+  window.scrollTo(0, 0);
+}
+function go(id){
+  if(id === "play"){
+    if(game && !game.done) return show("play");
+    if(!$("result").hidden && game && game.done) return show("result");
+    return show("home");
+  }
+  show(id);
+}
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-go]");
+  if(b) go(b.dataset.go);
+});
+
+/* ---------- Home ---------- */
+function renderHome(){
+  const box = $("levels"); box.replaceChildren();
+  for(const key in LEVELS){
+    const L = LEVELS[key], n = L.parsed.length * PER_SNIPPET, best = store("tc-best-" + key);
+    box.append(h("button", {class:"lvl", type:"button", onclick:() => startGame(key)},
+      h("b", {}, L.name), h("small", {}, L.blurb),
+      h("div", {class:"meta"}, L.types.length + " types · " + n + " questions · " + L.pts + " pts each"),
+      h("div", {class:"best"}, best ? "Best: " + best + " / " + maxScore(L, n) : "Not played yet")));
+  }
+}
+
+/* ---------- Game ---------- */
+function pickQuestions(L){
+  const qs = [];
+  L.parsed.forEach((sn, si) => {
+    const idx = shuffle(sn.toks.map((t, k) => k)), chosen = [], seenType = new Set(), seenText = new Set();
+    for(const k of idx){ const t = sn.toks[k]; if(!seenType.has(t.type) && !seenText.has(t.text)){ chosen.push(k); seenType.add(t.type); seenText.add(t.text); } if(chosen.length === PER_SNIPPET) break; }
+    for(const k of idx){ if(chosen.length === PER_SNIPPET) break; const t = sn.toks[k]; if(!chosen.includes(k) && !seenText.has(t.text)){ chosen.push(k); seenText.add(t.text); } }
+    chosen.forEach(k => qs.push({si, k}));
+  });
+  return qs;
+}
+function startGame(key){
+  const L = LEVELS[key];
+  game = {key, L, qs:pickQuestions(L), i:0, score:0, streak:0, best:0, right:0, log:[], locked:false, done:false};
+  show("play"); renderQ();
+}
+function renderHud(){
+  const g = game;
+  $("hud").replaceChildren(
+    h("div", {}, g.L.name),
+    h("div", {}, "Question ", h("b", {}, Math.min(g.i + 1, g.qs.length) + "/" + g.qs.length)),
+    h("div", {}, "Score ", h("b", {}, String(g.score))),
+    h("div", {}, "Streak ", h("b", {}, String(g.streak)))
+  );
+  $("barFill").style.width = (g.i / g.qs.length * 100) + "%";
+}
+function renderQ(){
+  const g = game, q = g.qs[g.i], sn = g.L.parsed[q.si], tok = sn.toks[q.k];
+  g.locked = false; renderHud();
+  const opts = h("div", {class:"opts", role:"group", "aria-label":"Token types"});
+  g.L.types.forEach((type, n) => {
+    opts.append(h("button", {class:"opt", type:"button", "data-type":type, onclick:() => answer(type)}, dot(type), h("span", {}, type), h("kbd", {}, String(n + 1))));
+  });
+  $("qArea").replaceChildren(
+    h("div", {class:"card"},
+      codeEl(sn, {target:q.k, dimOthers:true}),
+      h("p", {class:"q"}, "What type of token is ", h("code", {}, tok.text), "?"),
+      opts,
+      h("div", {id:"fb", "aria-live":"polite"}),
+      h("div", {class:"row", id:"nextRow"})));
+}
+function answer(type){
+  const g = game; if(g.locked) return; g.locked = true;
+  const q = g.qs[g.i], tok = g.L.parsed[q.si].toks[q.k], ok = type === tok.type;
+  let delta = 0, note = "";
+  if(ok){
+    g.streak++; g.right++; g.best = Math.max(g.best, g.streak);
+    delta = g.L.pts;
+    if(g.streak >= STREAK_AT){ delta += BONUS; note = " (includes +" + BONUS + " streak bonus)"; }
+    g.score += delta;
+  }else{
+    g.streak = 0;
+    const lost = Math.min(g.score, g.L.pen); g.score -= lost; delta = -lost;
+  }
+  g.log.push({text:tok.text, chosen:type, correct:tok.type, ok});
+  document.querySelectorAll(".opt").forEach(b => {
+    b.disabled = true;
+    if(b.dataset.type === tok.type) b.classList.add("ok");
+    else if(b.dataset.type === type) b.classList.add("bad");
+  });
+  const last = g.i === g.qs.length - 1;
+  $("fb").replaceChildren(h("div", {class:"fb " + (ok ? "ok" : "bad")},
+    h("b", {}, ok ? "Correct, +" + delta + " points" + note : "Not quite. " + (delta ? delta + " points. " : "")),
+    ok ? "" : h("span", {}, " ", h("code", {}, tok.text), " is a ", h("b", {}, tok.type), "."),
+    h("div", {class:"why"}, TYPES[tok.type].why)));
+  const nb = h("button", {class:"btn", type:"button", onclick:next}, last ? "See results" : "Next question");
+  $("nextRow").replaceChildren(nb); nb.focus();
+  renderHud();
+}
+function next(){
+  const g = game; g.i++;
+  if(g.i >= g.qs.length){ g.done = true; return renderResult(); }
+  renderQ();
+}
+document.addEventListener("keydown", e => {
+  if(!game || game.done || game.locked || $("play").hidden || e.ctrlKey || e.metaKey || e.altKey) return;
+  const n = parseInt(e.key, 10);
+  if(n >= 1 && n <= game.L.types.length) answer(game.L.types[n - 1]);
+});
+
+/* ---------- Results ---------- */
+function renderResult(){
+  const g = game, n = g.qs.length, acc = Math.round(g.right / n * 100), mx = maxScore(g.L, n);
+  const rating = acc >= 90 ? "Lexer Master" : acc >= 70 ? "Token Tamer" : acc >= 50 ? "Scanner Apprentice" : "Keep practising";
+  const prev = parseInt(store("tc-best-" + g.key) || "0", 10);
+  const isBest = g.score > prev;
+  if(isBest) store("tc-best-" + g.key, String(g.score));
+  const wrong = g.log.filter(x => !x.ok);
+  $("result").replaceChildren(h("div", {class:"card"},
+    h("h2", {}, rating),
+    h("p", {class:"lead"}, g.L.name + " level finished." + (isBest ? " New best score for this level." : "")),
+    h("div", {class:"stats"},
+      stat(g.score + " / " + mx, "Score"), stat(acc + "%", "Accuracy (" + g.right + " of " + n + ")"), stat(String(g.best), "Longest streak")),
+    wrong.length ? h("div", {},
+      h("h3", {}, "Review your mistakes"),
+      h("div", {class:"tw"}, h("table", {},
+        h("tr", {}, h("th", {}, "Lexeme"), h("th", {}, "Your answer"), h("th", {}, "Correct")),
+        wrong.map(w => h("tr", {}, h("td", {}, h("code", {}, w.text)), h("td", {}, w.chosen), h("td", {}, h("span", {class:"pill"}, dot(w.correct), w.correct))))))) : h("p", {}, "No mistakes. Every lexeme was classified correctly."),
+    h("div", {class:"row"},
+      h("button", {class:"btn", type:"button", onclick:() => startGame(g.key)}, "Play " + g.L.name + " again"),
+      h("button", {class:"btn ghost", type:"button", onclick:() => { game = null; renderHome(); show("home"); }}, "Choose another level"),
+      h("button", {class:"btn ghost", type:"button", "data-go":"key"}, "View answer key"))));
+  renderHome(); show("result");
+}
+const stat = (v, l) => h("div", {class:"stat"}, h("b", {}, v), h("span", {}, l));
+
+/* ---------- Rules legend ---------- */
+(function(){
+  const t = $("legend");
+  t.append(h("tr", {}, h("th", {}, "Type"), h("th", {}, "What it is"), h("th", {}, "Examples")));
+  for(const k in TYPES) t.append(h("tr", {}, h("td", {}, h("span", {class:"pill"}, dot(k), k)), h("td", {}, TYPES[k].why), h("td", {class:"mono"}, TYPES[k].ex)));
+})();
+
+/* ---------- Demo ---------- */
+const DEMO = {src:"int total = count + 42;"}; DEMO.toks = lex(DEMO.src);
+let demoStep = 0;
+function renderDemo(){
+  const n = DEMO.toks.length, onTok = demoStep < n;
+  $("demoCode").replaceChildren(codeEl(DEMO, onTok ? {target:demoStep, dimOthers:true, colorUpTo:demoStep} : {colorAll:true}));
+  const box = $("demoBox");
+  if(onTok){
+    const t = DEMO.toks[demoStep];
+    box.className = "fb";
+    box.replaceChildren(h("div", {}, "Step " + (demoStep + 1) + " of " + n + ". The game asks: what type of token is ", h("code", {}, t.text), "?"),
+      h("div", {style:"margin-top:8px"}, h("b", {}, "Answer: "), h("span", {class:"pill"}, dot(t.type), t.type)),
+      h("div", {class:"why"}, TYPES[t.type].why));
+  }else{
+    box.className = "fb ok";
+    box.replaceChildren("All " + n + " lexemes classified. The colours show the finished token stream.");
+  }
+  $("demoBack").disabled = demoStep === 0;
+  $("demoNext").disabled = demoStep >= n;
+  $("demoNext").textContent = demoStep === n - 1 ? "Finish" : "Next step";
+  $("demoSum").hidden = onTok;
+}
+$("demoNext").addEventListener("click", () => { demoStep++; renderDemo(); });
+$("demoBack").addEventListener("click", () => { demoStep = Math.max(0, demoStep - 1); renderDemo(); });
+$("demoReset").addEventListener("click", () => { demoStep = 0; renderDemo(); });
+(function(){
+  const t = $("demoTable");
+  t.append(h("tr", {}, h("th", {}, "#"), h("th", {}, "Lexeme"), h("th", {}, "Token type")));
+  DEMO.toks.forEach((tk, i) => t.append(h("tr", {}, h("td", {}, String(i + 1)), h("td", {}, h("code", {}, tk.text)), h("td", {}, h("span", {class:"pill"}, dot(tk.type), tk.type)))));
+})();
+
+/* ---------- Answer key ---------- */
+(function(){
+  const body = $("keyBody");
+  for(const key in LEVELS){
+    const L = LEVELS[key], d = h("details", key === "easy" ? {open:""} : {}, h("summary", {}, L.name + " level"));
+    const inner = h("div", {});
+    L.parsed.forEach((sn, i) => {
+      const counts = {}; sn.toks.forEach(t => counts[t.type] = (counts[t.type] || 0) + 1);
+      inner.append(h("h3", {}, "Snippet " + (i + 1) + ": " + sn.toks.length + " tokens"), codeEl(sn, {colorAll:true}),
+        h("div", {class:"tw"}, h("table", {},
+          h("tr", {}, h("th", {}, "#"), h("th", {}, "Lexeme"), h("th", {}, "Token type")),
+          sn.toks.map((t, k) => h("tr", {}, h("td", {}, String(k + 1)), h("td", {}, h("code", {}, t.text)), h("td", {}, h("span", {class:"pill"}, dot(t.type), t.type)))))),
+        h("p", {class:"why"}, "Count: " + Object.keys(counts).map(k => counts[k] + " " + k).join(", ")));
+    });
+    d.append(inner); body.append(d);
+  }
+})();
+
+/* ---------- Init ---------- */
+renderHome(); renderDemo(); show("home");
+</script>
+</body>
+</html>
